@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
 
 @Controller
-@RequestMapping("/usuario")
+@RequestMapping("/usuarios")
 class UsuarioController {
 
     val logger: Logger = LoggerFactory.getLogger(UsuarioController::class.java)

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 
 @Controller
-@RequestMapping("/v1/paper")
+@RequestMapping("/v1/papers")
 class PaperController {
     val logger: Logger = LoggerFactory.getLogger(PaperController::class.java)
 
