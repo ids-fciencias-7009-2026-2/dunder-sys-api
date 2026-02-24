@@ -11,7 +11,9 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.*
+import java.security.MessageDigest
 import java.time.LocalDateTime
+import java.util.UUID
 
 /**
  * Controlador encargado de exponer los endpoints REST relacionados
@@ -29,12 +31,19 @@ import java.time.LocalDateTime
 class UsuarioController {
 
     /**
+     * stateless
+     */
+
+
+    /**
      * Logger para registrar eventos importantes del flujo de ejecución.
      *
      * Permite imprimir información útil en consola para depuración,
      * auditoría y análisis del comportamiento del sistema.
      */
     val logger: Logger = LoggerFactory.getLogger(UsuarioController::class.java)
+
+    val activeTokens=mutableSetOf<String>()
 
     /**
      * Endpoint que devuelve la información del usuario autenticado.
@@ -47,7 +56,16 @@ class UsuarioController {
      * @return ResponseEntity con un objeto Usuario y código HTTP 200 (OK).
      */
     @GetMapping("/me")
-    fun retrieveUsuario(): ResponseEntity<Usuario> {
+    fun retrieveUsuario(
+        @RequestHeader("Authorization", required = false) token: String?
+    ): ResponseEntity<Usuario> {
+
+        logger.info("Token recibido: $token")
+        // Busca en la BD el usuario donde el usuario.id = token
+
+        if (token==null||!activeTokens.contains(token)) {
+            return ResponseEntity.status(401).build()
+        }
 
         // Simulación de usuario obtenido desde base de datos
         val usuarioFake = Usuario(
@@ -100,26 +118,33 @@ class UsuarioController {
      * @return HTTP 200 si las credenciales son correctas,
      *         HTTP 401 si son incorrectas.
      */
+
+
     @PostMapping("/login")
     fun login(
         @RequestBody loginRequest: LoginRequest
     ): ResponseEntity<Any> {
+
+        val passwordHash = hashPassword(loginRequest.password)
+        logger.info("password from request: $passwordHash")
 
         // Usuario simulado obtenido del sistema
         val usuarioFake = Usuario(
             "un-id",
             "un nombre",
             "un email aqui",
-            "Test123."
+            hashPassword("Test123.")
         )
 
         logger.info("try make login with: $loginRequest")
+        logger.info("user password: ${usuarioFake.password}")
 
-        return if (usuarioFake.password == loginRequest.password) {
+        return if (usuarioFake.password == passwordHash) {
             logger.info("Login successful")
-
+            val token = tokenGenerator()
+            activeTokens.add(token)
             // HTTP 200 → autenticación exitosa
-            ResponseEntity.ok(Any())
+            ResponseEntity.ok(token)
 
         } else {
             logger.error("Login failed")
@@ -127,6 +152,18 @@ class UsuarioController {
             // HTTP 401 → Unauthorized (credenciales inválidas)
             ResponseEntity.status(401).build()
         }
+    }
+
+    fun hashPassword(password:String):String {
+        val bytes= MessageDigest
+            .getInstance("SHA-256")
+            .digest(password.toByteArray())
+        return bytes.joinToString("") {"%02x".format(it) }
+    }
+
+    fun tokenGenerator(): String{
+        val token = UUID.randomUUID().toString()
+        return token
     }
 
     /**
@@ -141,7 +178,11 @@ class UsuarioController {
      * @return ResponseEntity con información del logout.
      */
     @PostMapping("/logout")
-    fun logout(): ResponseEntity<Any> {
+    fun logout(
+        @RequestHeader("Authorization")token:String
+    ): ResponseEntity<Any> {
+
+        activeTokens.remove(token)
 
         val usuarioFake = Usuario(
             id = "3456",
@@ -187,5 +228,33 @@ class UsuarioController {
         usuarioFake.email = updateUsuarioRequest.email
 
         return ResponseEntity.ok(usuarioFake)
+    }
+
+
+
+    @GetMapping("/{id}")
+    fun getUsuarioById(
+        @RequestHeader("Authorization")token:String?,
+        @PathVariable id:String,
+        @RequestBody updateUsuarioRequest: UpdateUsuarioRequest
+    ):ResponseEntity<String> {
+
+        /*if (token==null||!activeTokens.contains(token)) {
+            return ResponseEntity.status(401).build()
+        }*/
+
+        return ResponseEntity.ok("Usuario con id: $id")
+    }
+
+    @GetMapping("/buscar")
+    fun buscarUsuario(
+        @RequestHeader("Authorization")token:String?,
+
+        @RequestParam email:String,
+        @RequestParam cp:String,
+        @RequestParam edad: Int,
+        @RequestParam estado: String
+    ):ResponseEntity<String> {
+        return ResponseEntity.ok("Buscando usuario con email: $email - $cp - $edad - $estado")
     }
 }
