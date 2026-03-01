@@ -232,6 +232,36 @@ class UsuarioController {
 
 
 
+    /**
+     * Endpoint que simula la obtención de un usuario específico
+     * a partir de su identificador.
+     *
+     * Este método ejemplifica el uso de @PathVariable para capturar
+     * valores directamente desde la URL.
+     *
+     * URL:    http://localhost:8080/usuarios/{id}
+     * Metodo: GET
+     *
+     * Ejemplo:
+     * GET /usuarios/123
+     *
+     * En este caso, el valor "123" será asignado automáticamente
+     * al parámetro 'id'.
+     *
+     * @param token Header Authorization recibido en la petición.
+     *              En una implementación real se validaría para
+     *              verificar autenticación.
+     *
+     * @param id Identificador del usuario recibido desde la URL.
+     *
+     * @param updateUsuarioRequest (Uso didáctico)
+     *              Se incluye para mostrar que Spring puede mapear
+     *              múltiples fuentes de datos, aunque en un diseño
+     *              REST correcto un método GET no debería recibir body.
+     *
+     * @return ResponseEntity con un mensaje que incluye el id recibido
+     *         y código HTTP 200 (OK).
+     */
     @GetMapping("/{id}")
     fun getUsuarioById(
         @RequestHeader("Authorization")token:String?,
@@ -246,6 +276,35 @@ class UsuarioController {
         return ResponseEntity.ok("Usuario con id: $id")
     }
 
+
+
+    /**
+     * Endpoint que simula la búsqueda de usuarios utilizando
+     * múltiples filtros enviados como parámetros en la URL.
+     *
+     * Este método introduce el uso de @RequestParam para capturar
+     * query parameters.
+     *
+     * URL:    http://localhost:8080/usuarios/buscar
+     * Metodo: GET
+     *
+     * Ejemplo:
+     * GET /usuarios/buscar?email=test@gmail.com&cp=56530&edad=25&estado=MX
+     *
+     * Spring asigna automáticamente cada parámetro al argumento
+     * correspondiente y realiza conversión de tipos cuando es necesario.
+     *
+     * @param token Header Authorization (simulado).
+     *              En un sistema real se validaría antes de permitir la búsqueda.
+     *
+     * @param email Correo electrónico utilizado como filtro.
+     * @param cp Código postal utilizado como filtro.
+     * @param edad Edad del usuario (Spring convierte automáticamente el valor a Int).
+     * @param estado Estado o entidad federativa como criterio de búsqueda.
+     *
+     * @return ResponseEntity con un mensaje que contiene los filtros recibidos
+     *         y código HTTP 200 (OK).
+     */
     @GetMapping("/buscar")
     fun buscarUsuario(
         @RequestHeader("Authorization")token:String?,
