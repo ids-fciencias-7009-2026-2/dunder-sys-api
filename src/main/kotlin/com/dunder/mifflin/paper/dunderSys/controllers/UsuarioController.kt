@@ -5,9 +5,12 @@ import com.dunder.mifflin.paper.dunderSys.domain.toUsuario
 import com.dunder.mifflin.paper.dunderSys.dto.request.CreateUsuarioRequest
 import com.dunder.mifflin.paper.dunderSys.dto.request.LoginRequest
 import com.dunder.mifflin.paper.dunderSys.dto.request.UpdateUsuarioRequest
+import com.dunder.mifflin.paper.dunderSys.dto.response.LoginResponse
 import com.dunder.mifflin.paper.dunderSys.dto.response.LogoutResponse
+import com.dunder.mifflin.paper.dunderSys.services.UsuarioService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.*
@@ -30,6 +33,9 @@ import java.util.UUID
 @RequestMapping("/usuarios") // Prefijo base para todos los endpoints de este controlador
 class UsuarioController {
 
+    @Autowired
+    lateinit var usuarioService: UsuarioService
+
     /**
      * stateless
      */
@@ -43,7 +49,7 @@ class UsuarioController {
      */
     val logger: Logger = LoggerFactory.getLogger(UsuarioController::class.java)
 
-    val activeTokens=mutableSetOf<String>()
+    val activeTokens = mutableSetOf<String>()
 
     /**
      * Endpoint que devuelve la información del usuario autenticado.
@@ -63,21 +69,15 @@ class UsuarioController {
         logger.info("Token recibido: $token")
         // Busca en la BD el usuario donde el usuario.id = token
 
-        if (token==null||!activeTokens.contains(token)) {
+        val userFound = usuarioService.findByToken(token.orEmpty())
+        if (token == null || (userFound == null)) {
             return ResponseEntity.status(401).build()
         }
 
-        // Simulación de usuario obtenido desde base de datos
-        val usuarioFake = Usuario(
-            id = "3456",
-            nombre = "Luis Gerardo",
-            email = "some-email@gmail.com"
-        )
-
-        logger.info("User found in database: $usuarioFake")
+        logger.info("User found in service: $userFound")
 
         // Retorna HTTP 200 junto con el usuario encontrado
-        return ResponseEntity.ok(usuarioFake)
+        return ResponseEntity.ok(userFound)
     }
 
     /**
@@ -99,6 +99,11 @@ class UsuarioController {
 
         // Conversión de DTO a objeto de dominio usando una extension function
         val usuarioParaAgregar = createUsuarioRequest.toUsuario()
+
+        val password = hashPassword(createUsuarioRequest.password)
+        usuarioParaAgregar.password = password
+
+        usuarioService.addNewUsuario(usuarioParaAgregar)
 
         logger.info("Usuario para agregar: $usuarioParaAgregar")
 
@@ -128,40 +133,26 @@ class UsuarioController {
         val passwordHash = hashPassword(loginRequest.password)
         logger.info("password from request: $passwordHash")
 
-        // Usuario simulado obtenido del sistema
-        val usuarioFake = Usuario(
-            "un-id",
-            "un nombre",
-            "un email aqui",
-            hashPassword("Test123.")
-        )
+        val userFound = usuarioService.login(loginRequest.email, passwordHash)
 
         logger.info("try make login with: $loginRequest")
-        logger.info("user password: ${usuarioFake.password}")
+        logger.info("user password: ${userFound?.password}")
 
-        return if (usuarioFake.password == passwordHash) {
-            logger.info("Login successful")
-            val token = tokenGenerator()
-            activeTokens.add(token)
-            // HTTP 200 → autenticación exitosa
-            ResponseEntity.ok(token)
-
+        return if (userFound != null) {
+            ResponseEntity.ok(LoginResponse(userFound.token.orEmpty()))
         } else {
-            logger.error("Login failed")
-
-            // HTTP 401 → Unauthorized (credenciales inválidas)
             ResponseEntity.status(401).build()
         }
     }
 
-    fun hashPassword(password:String):String {
-        val bytes= MessageDigest
+    fun hashPassword(password: String): String {
+        val bytes = MessageDigest
             .getInstance("SHA-256")
             .digest(password.toByteArray())
-        return bytes.joinToString("") {"%02x".format(it) }
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    fun tokenGenerator(): String{
+    fun tokenGenerator(): String {
         val token = UUID.randomUUID().toString()
         return token
     }
@@ -179,7 +170,7 @@ class UsuarioController {
      */
     @PostMapping("/logout")
     fun logout(
-        @RequestHeader("Authorization")token:String
+        @RequestHeader("Authorization") token: String
     ): ResponseEntity<Any> {
 
         activeTokens.remove(token)
@@ -187,11 +178,12 @@ class UsuarioController {
         val usuarioFake = Usuario(
             id = "3456",
             nombre = "Luis Bernabe",
-            email = "some-email"
+            email = "some-email",
+            edad = 29
         )
 
         val logoutResponse = LogoutResponse(
-            usuarioFake.id,
+            usuarioFake.id ?: "N/A",
             LocalDateTime.now().toString()
         )
 
@@ -217,7 +209,8 @@ class UsuarioController {
         val usuarioFake = Usuario(
             id = "3456",
             nombre = "Luis Bernabe",
-            email = "some-email"
+            email = "some-email",
+            edad = 29
         )
 
         logger.info("usuario encontrado: $usuarioFake")
@@ -229,7 +222,6 @@ class UsuarioController {
 
         return ResponseEntity.ok(usuarioFake)
     }
-
 
 
     /**
@@ -264,10 +256,10 @@ class UsuarioController {
      */
     @GetMapping("/{id}")
     fun getUsuarioById(
-        @RequestHeader("Authorization")token:String?,
-        @PathVariable id:String,
+        @RequestHeader("Authorization") token: String?,
+        @PathVariable id: String,
         @RequestBody updateUsuarioRequest: UpdateUsuarioRequest
-    ):ResponseEntity<String> {
+    ): ResponseEntity<String> {
 
         /*if (token==null||!activeTokens.contains(token)) {
             return ResponseEntity.status(401).build()
@@ -275,7 +267,6 @@ class UsuarioController {
 
         return ResponseEntity.ok("Usuario con id: $id")
     }
-
 
 
     /**
@@ -307,13 +298,19 @@ class UsuarioController {
      */
     @GetMapping("/buscar")
     fun buscarUsuario(
-        @RequestHeader("Authorization")token:String?,
-
-        @RequestParam email:String,
-        @RequestParam cp:String,
+        @RequestHeader("Authorization") token: String?,
+        @RequestParam email: String,
+        @RequestParam cp: String,
         @RequestParam edad: Int,
         @RequestParam estado: String
-    ):ResponseEntity<String> {
+    ): ResponseEntity<String> {
         return ResponseEntity.ok("Buscando usuario con email: $email - $cp - $edad - $estado")
+    }
+
+
+    @GetMapping("/all")
+    fun retrieveAllUsuarios(): ResponseEntity<List<Usuario>> {
+        val allUsers = usuarioService.searchAllUsuarios()
+        return ResponseEntity.ok(allUsers)
     }
 }
