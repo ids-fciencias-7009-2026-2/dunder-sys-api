@@ -10,15 +10,15 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(name = "usuarios")
- data class UsuarioEntity(
-   @Id
+data class UsuarioEntity(
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Int? = null,
-   var email: String,
-   var password: String,
-   var token: String?,
-   var nombre: String,
-   @Column(name = "edad")
+    var email: String,
+    var password: String,
+    var token: String?,
+    var nombre: String,
+    @Column(name = "edad")
     var age: Int?,
     var createdAt: LocalDateTime = LocalDateTime.now(),
     var updatedAt: LocalDateTime = LocalDateTime.now(),
