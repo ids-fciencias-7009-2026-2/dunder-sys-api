@@ -45,8 +45,7 @@ data class Usuario(
     /**
      * Identificador único del usuario.
      * En un sistema real, normalmente lo genera la base de datos.
-     */
-    val id: String?,
+     */ val id: String? = null,
 
     /**
      * Nombre del usuario.
@@ -65,5 +64,6 @@ data class Usuario(
      * Es opcional (nullable) y no siempre se utiliza.
      */
     var password: String? = null,
-    var edad: Int? = null
+    var edad: Int? = null,
+    var token: String? = null,
 )

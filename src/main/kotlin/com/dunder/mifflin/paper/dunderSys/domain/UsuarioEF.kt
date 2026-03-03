@@ -1,6 +1,7 @@
 package com.dunder.mifflin.paper.dunderSys.domain
 
 import com.dunder.mifflin.paper.dunderSys.dto.request.CreateUsuarioRequest
+import com.dunder.mifflin.paper.dunderSys.entities.UsuarioEntity
 import java.util.UUID
 
 /**
@@ -51,12 +52,17 @@ import java.util.UUID
 fun CreateUsuarioRequest.toUsuario(): Usuario {
 
     // Generamos un identificador único de forma simulada
-    val id = "id-random-" + UUID.randomUUID().toString()
+    //val id = "id-random-" + UUID.randomUUID().toString()
 
     // Creamos el objeto de dominio usando los datos del DTO
     return Usuario(
-        id = id,
         nombre = this.nombre,
-        email = this.email
+        email = this.email,
+        edad = this.edad,
+        password = this.password,
     )
+}
+
+fun UsuarioEntity.toUsuario(): Usuario {
+    return Usuario(id = this.id.toString(), nombre = this.nombre, email = this.email, edad = this.age, token = this.token)
 }

@@ -6,8 +6,10 @@ import com.dunder.mifflin.paper.dunderSys.dto.request.CreateUsuarioRequest
 import com.dunder.mifflin.paper.dunderSys.dto.request.LoginRequest
 import com.dunder.mifflin.paper.dunderSys.dto.request.UpdateUsuarioRequest
 import com.dunder.mifflin.paper.dunderSys.dto.response.LogoutResponse
+import com.dunder.mifflin.paper.dunderSys.services.UsuarioService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.*
@@ -29,6 +31,9 @@ import java.util.UUID
 @Controller
 @RequestMapping("/usuarios") // Prefijo base para todos los endpoints de este controlador
 class UsuarioController {
+
+    @Autowired
+    lateinit var usuarioService: UsuarioService
 
     /**
      * stateless
@@ -99,6 +104,11 @@ class UsuarioController {
 
         // Conversión de DTO a objeto de dominio usando una extension function
         val usuarioParaAgregar = createUsuarioRequest.toUsuario()
+
+        val passwordHashed = hashPassword(createUsuarioRequest.password)
+        usuarioParaAgregar.password = passwordHashed
+
+        usuarioService.addNewUsuario(usuarioParaAgregar)
 
         logger.info("Usuario para agregar: $usuarioParaAgregar")
 
@@ -316,4 +326,11 @@ class UsuarioController {
     ):ResponseEntity<String> {
         return ResponseEntity.ok("Buscando usuario con email: $email - $cp - $edad - $estado")
     }
+
+    @GetMapping("/all")
+    fun retrieveAllUsuarios(): ResponseEntity<Any>{
+        val allUserFound = usuarioService.searchAllUsuarios()
+        return ResponseEntity.ok(allUserFound)
+    }
+
 }
