@@ -170,9 +170,16 @@ class UsuarioController {
      */
     @PostMapping("/logout")
     fun logout(
-        @RequestHeader("Authorization") token: String
+        @RequestHeader("Authorization") token: String?
     ): ResponseEntity<Any> {
+        logger.info("Token recibido: $token")
 
+        val userFound = usuarioService.findByToken(token.orEmpty())
+        if (token == null || (userFound == null)) {
+            return ResponseEntity.status(401).build()
+        }
+
+        // Vieja implementacion
         activeTokens.remove(token)
 
         val usuarioFake = Usuario(
@@ -186,6 +193,8 @@ class UsuarioController {
             usuarioFake.id ?: "N/A",
             LocalDateTime.now().toString()
         )
+
+        //*******
 
         return ResponseEntity.ok(logoutResponse)
     }
@@ -309,7 +318,14 @@ class UsuarioController {
 
 
     @GetMapping("/all")
-    fun retrieveAllUsuarios(): ResponseEntity<List<Usuario>> {
+    fun retrieveAllUsuarios(@RequestHeader("Authorization", required = true) token: String?): ResponseEntity<List<Usuario>> {
+        logger.info("Token recibido: $token")
+
+        val userFound = usuarioService.findByToken(token.orEmpty())
+        if (token == null || (userFound == null)) {
+            return ResponseEntity.status(401).build()
+        }
+
         val allUsers = usuarioService.searchAllUsuarios()
         return ResponseEntity.ok(allUsers)
     }

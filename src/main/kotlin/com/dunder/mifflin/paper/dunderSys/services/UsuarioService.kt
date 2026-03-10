@@ -48,15 +48,27 @@ class UsuarioService {
         logger.info("Usuario exists: ${usuarioLogged.toString()}")
         return usuarioLogged?.toUsuario()
     }
-
+/*
     fun isUserValid(token: String): Boolean {
         val usuarioLogged = usuarioRepository.findByToken(token)
         logger.info("Usuario exists: ${usuarioLogged.toString()}")
         return usuarioLogged != null
-    }
+    }*/
 
     fun tokenGenerator(): String {
         val token = UUID.randomUUID().toString()
         return token
     }
+
+    /*fun borraToken(token: String){
+        //usuarioRepository.deleteTokenById()
+    }
+
+    fun logout(token: String){
+        val usuario = findByToken(token)
+        if (usuario != null) {
+            //usuarioRepository.deleteTokenById()
+        }
+
+    }*/
 }
